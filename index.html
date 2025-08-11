@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mona — Challenge</title>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#ff5b89" />
+<style>
+  :root{ --bg1:#100b22; --bg2:#1b1235; --accent:#ff5b89; --soft:#ffe3ec; --text:#fff; }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:
+    radial-gradient(900px 600px at 10% 20%, rgba(255,91,137,.14), transparent 60%),
+    radial-gradient(800px 500px at 90% 80%, rgba(163,135,255,.12), transparent 60%),
+    linear-gradient(180deg,var(--bg2),var(--bg1));
+    color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;}
+  .wrap{min-height:100%;display:grid;place-items:center;padding:22px}
+  .card{width:min(820px,94vw);border-radius:28px;padding:22px 20px 26px;
+    background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.02));
+    box-shadow:0 20px 60px rgba(0,0,0,.65), inset 0 0 0 1px rgba(255,255,255,.06);}
+  header{text-align:center;margin-bottom:10px}
+  .brand{font-family:"Great Vibes",cursive;font-size:clamp(40px,9vw,100px)}
+  .tag{color:var(--soft);opacity:.95}
+  .section{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;margin-bottom:10px}
+  label{display:block;margin-bottom:6px}
+  input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff}
+  .btn{padding:8px 14px;border-radius:10px;border:none;background:rgba(255,255,255,.1);color:#fff;cursor:pointer}
+  .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:999px;font-size:13px;background:rgba(255,255,255,.06)}
+  .lives{display:flex;gap:4px}.life{font-size:20px}
+  .floaters{position:absolute;inset:-10px;pointer-events:none;overflow:hidden;z-index:-1}
+  .floater{position:absolute;bottom:-40px;font-size:18px;opacity:.85;animation: rise linear forwards}
+  @keyframes rise{to{transform:translateY(-120vh) rotate(20deg);opacity:0}}
+  .codeBox{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(0,0,0,.35);padding:10px;border-radius:10px}
+
+  /* تحسينات الجوال */
+  @media (max-width: 600px) {
+    .brand { font-size: 48px; }
+    .tag { font-size: 16px; }
+    input, .btn { font-size: 18px; padding: 12px; }
+    #problem { font-size: 20px; }
+    .card { padding: 16px; }
+    .pill { font-size: 14px; }
+    .codeBox { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="card">
+      <header>
+        <div class="brand">Mona</div>
+        <div class="tag">Daddy’s girl</div>
+      </header>
+
+      <div class="floaters" id="floaters"></div>
+
+      <section class="section" id="step1">
+        <label>اكتبي اسمك عشان نخصص لك الهدية</label>
+        <input id="name" type="text" placeholder="مثال: Mona">
+        <button class="btn" id="startBtn">ابدئي التحدّي</button>
+      </section>
+
+      <section class="section" id="step2" hidden>
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+          <div class="pill">⏳ <span id="timer">180</span> ثانية</div>
+          <div class="lives" id="lives"><span class="life">💗</span><span class="life">💗</span><span class="life">💗</span></div>
+        </div>
+        <div id="problem" style="font-size:24px;font-weight:bold;margin-bottom:10px">—</div>
+        <input id="answer" type="number" placeholder="اكتبي الناتج">
+        <button class="btn" id="submitAnswer">تحقّقي</button>
+      </section>
+
+      <div id="resultArea"></div>
+
+      <audio id="success-audio" src="song.mp3" preload="auto"></audio>
+    </div>
+  </main>
+
+<script>
+const COUNTDOWN = 180;
+const LIVES_TOTAL = 3;
+const FIXED_CODE = "X4RLPJKC78HCZJCW";
+
+const floaters = document.getElementById('floaters');
+function spawnHeart(){
+  const hearts = ["💗","💖","💘","💞","💓","💕"];
+  const el = document.createElement('span');
+  el.className = 'floater';
+  el.textContent = hearts[Math.floor(Math.random()*hearts.length)];
+  el.style.left = (Math.random()*100) + 'vw';
+  el.style.fontSize = (16 + Math.random()*26) + 'px';
+  el.style.animationDuration = (6000 + Math.random()*6000) + 'ms';
+  floaters.appendChild(el);
+  el.addEventListener('animationend', ()=> el.remove());
+}
+(function loop(){ spawnHeart(); setTimeout(loop, 420+Math.random()*900) })();
+
+let currentAnswer = 0, lives = LIVES_TOTAL, timer = COUNTDOWN, timerId;
+function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min }
+function newProblem(){
+  const a = randInt(3,12), b = randInt(2,11), c = randInt(2,9);
+  if(Math.random() < 0.5){ currentAnswer = (a+b)*c; return `(${a} + ${b}) × ${c} = ?`; }
+  currentAnswer = a*b + c; return `${a} × ${b} + ${c} = ?`;
+}
+
+const startBtn = document.getElementById('startBtn');
+const audio = document.getElementById('success-audio');
+
+startBtn.addEventListener('click', async () => {
+  const name = document.getElementById('name').value.trim();
+  if(!name){ alert('اكتبي اسمك أول 👇'); return; }
+  try { await audio.play(); audio.pause(); audio.currentTime = 0; } catch {}
+  document.getElementById('step1').hidden = true;
+  document.getElementById('step2').hidden = false;
+  document.getElementById('problem').textContent = newProblem();
+  timer = COUNTDOWN; document.getElementById('timer').textContent = timer;
+  lives = LIVES_TOTAL;
+  document.getElementById('lives').innerHTML = '💗'.repeat(lives).split('').map(h=>`<span class="life">${h}</span>`).join('');
+  clearInterval(timerId);
+  timerId = setInterval(()=>{
+    timer--; document.getElementById('timer').textContent = timer;
+    if(timer<=0){ failChallenge('انتهى الوقت 😅'); }
+  },1000);
+},{once:true});
+
+document.getElementById('submitAnswer').onclick = checkAnswer;
+document.getElementById('answer').addEventListener('keydown', e=>{ if(e.key==='Enter') checkAnswer(); });
+
+function checkAnswer(){
+  const val = Number(document.getElementById('answer').value);
+  if(Number.isNaN(val)) return;
+  if(val === currentAnswer){ successChallenge(); }
+  else {
+    lives--;
+    const livesEl = document.getElementById('lives');
+    if(livesEl.lastElementChild) livesEl.removeChild(livesEl.lastElementChild);
+    if(lives<=0){ failChallenge('خسرتِ كل المحاولات 😅'); }
+    else{ document.getElementById('problem').textContent = newProblem(); document.getElementById('answer').value=''; }
+  }
+}
+
+function failChallenge(msg){
+  clearInterval(timerId);
+  alert(msg);
+  document.getElementById('step2').hidden = true;
+  document.getElementById('step1').hidden = false;
+}
+
+function successChallenge(){
+  clearInterval(timerId);
+  document.getElementById('step2').hidden = true;
+  audio.currentTime = 0;
+  let playCount = 0;
+  audio.onended = () => {
+    playCount++;
+    if (playCount < 1) {
+      audio.currentTime = 0;
+      audio.play();
+    }
+  };
+  audio.play().catch(()=> alert('الصوت ما اشتغل—جرّبي تعلي صوت الجهاز أو أعيدي تحميل الصفحة.'));
+  const area = document.getElementById('resultArea');
+  area.innerHTML = `
+    <section class="section">
+      <div class="pill">🎉 مبروووك يا شطوورة أعرف أنك بتحلّينها صح لأنك دلوعة بابا</div>
+      <div class="codeBox" style="margin-top:10px">${FIXED_CODE}</div>
+    </section>
+  `;
+  for(let i=0;i<24;i++){ setTimeout(spawnHeart, i*60); }
+}
+</script>
+</body>
+</html>
