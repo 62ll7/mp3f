@@ -108,7 +108,7 @@ startBtn.addEventListener('click', async () => {
   const name = document.getElementById('name').value.trim();
   if(!name){ alert('اكتبي اسمك أول 👇'); return; }
 
-  // نعمل "unlock" للصوت بلمسة المستخدم (يفيد بعض المتصفحات)
+  // نعمل "unlock" للصوت بلمسة المستخدم (لبعض المتصفحات)
   try { await audio.play(); audio.pause(); audio.currentTime = 0; } catch {}
 
   document.getElementById('step1').hidden = true;
@@ -152,8 +152,16 @@ function successChallenge(){
   clearInterval(timerId);
   document.getElementById('step2').hidden = true;
 
-  // تشغيل الأغنية
+  // تشغيل الأغنية وإعادتها مرّة واحدة (إجمالي 2 مرات تشغيل)
   audio.currentTime = 0;
+  let playCount = 0;
+  audio.onended = () => {
+    playCount++;
+    if (playCount < 1) { // أقل من 1 يعني نعيدها مرة واحدة فقط
+      audio.currentTime = 0;
+      audio.play();
+    }
+  };
   audio.play().catch(()=> alert('الصوت ما اشتغل—جرّبي تعلي صوت الجهاز أو أعيدي تحميل الصفحة.'));
 
   // توليد عبارة النجاح + الرمز (غير موجودين قبل النجاح)
